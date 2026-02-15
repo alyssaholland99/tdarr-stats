@@ -15,6 +15,7 @@ services:
     container_name: tdarr-stats
     image: alyssaholland99/tdarr-stats
     restart: unless-stopped
+    network_mode: host
 ```
 ^^ docker-compose.yml
 
