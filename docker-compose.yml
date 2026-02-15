@@ -1,0 +1,5 @@
+services:
+  tdarr-stats:
+    container_name: tdarr-stats
+    image: alyssaholland99/tdarr-stats
+    restart: unless-stopped

@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TDARR Stats</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --info: #3498db;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Resolution chart uses ONE shared grid */
+        #resolutionChart {
+            display: grid;
+            grid-template-columns: 1fr 180px;
+            row-gap: 10px;
+            column-gap: 16px;
+            align-items: center;
+        }
+
+        /* Each row contributes elements to shared grid */
+        .resolution-bar {
+            display: contents;
+        }
+
+        .bar {
+            width: 100%;
+            height: 20px;
+            background-color: #ecf0f1;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 100%;
+            background-color: var(--secondary);
+            border-radius: 10px;
+        }
+
+        .value {
+            font-weight: bold;
+            color: var(--secondary);
+            white-space: nowrap;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+        
+        .upload-section {
+            background-color: white;
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .drop-area {
+            border: 2px dashed var(--secondary);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 1rem 0;
+            cursor: pointer;
+            transition: all 0.3s;
+            background-color: #f8f9fa;
+        }
+        
+        .drop-area:hover, .drop-area.active {
+            background-color: #e3f2fd;
+            border-color: var(--primary);
+        }
+        
+        .drop-area p {
+            margin: 0.5rem 0;
+            color: #666;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .btn {
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+            margin: 1rem 0;
+        }
+        
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .btn:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .stats-section {
+            display: none;
+            margin-top: 2rem;
+        }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-title {
+            font-size: 1rem;
+            color: #7f8c8d;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .card-value.unencoded {
+            color: var(--warning);
+        }
+
+        .card-value.encoded {
+            color: var(--success);
+        }
+        
+        .card-value.percentage {
+            color: var(--info);
+        }
+        
+        .chart-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .chart {
+            background-color: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .chart-title {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+        
+        .progress-bar {
+            height: 20px;
+            background-color: #ecf0f1;
+            border-radius: 10px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background-color: var(--secondary);
+            border-radius: 10px;
+        }
+        
+        .file-info {
+            display: flex;
+            justify-content: space-between;
+            margin: 1rem 0;
+            padding: 0.5rem;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .file-name {
+            font-weight: bold;
+        }
+        
+        .file-size {
+            color: #7f8c8d;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 1rem;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 0 0 8px 8px;
+            margin-top: 2rem;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .upload-section {
+                padding: 1rem;
+            }
+            
+            .drop-area {
+                padding: 1rem;
+            }
+            
+            .card {
+                padding: 1rem;
+            }
+            
+            .card-value {
+                font-size: 1.5rem;
+            }
+            
+            .chart-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>TDARR Stats Dashboard</h1>
+            <p class="subtitle">Upload your CSV file to view compression statistics</p>
+        </header>
+        
+        <section class="upload-section">
+            <h2>Upload Your CSV File</h2>
+            <p>Drag & drop your file or click to browse</p>
+            
+            <div class="drop-area" id="dropArea">
+                <p>Drag & drop your TDARR CSV file here</p>
+                <p>or</p>
+                <button class="btn" id="browseBtn">Browse Files</button>
+            </div>
+            
+            <input type="file" id="fileInput" class="file-input" accept=".csv">
+            
+            <button class="btn" id="uploadBtn" disabled>Upload & Analyze</button>
+            
+            <div class="file-info" id="fileInfo" style="display: none;">
+                <span class="file-name" id="fileName"></span>
+                <span class="file-size" id="fileSize"></span>
+            </div>
+        </section>
+        
+        <section class="stats-section" id="statsSection">
+            <h2>Compression Statistics</h2>
+            
+            <div class="summary-cards">
+                <div class="card">
+                    <p class="card-title">Total Size</p>
+                    <p class="card-value" id="totalSize">0 MB</p>
+                </div>
+                
+                <div class="card">
+                    <p class="card-title">Compressed Size</p>
+                    <p class="card-value" id="compressedSize">0 MB</p>
+                </div>
+
+                <div class="card">
+                    <p class="card-title">Space Saved</p>
+                    <p class="card-value" id="savedSize">0 MB</p>
+                </div>
+                
+            </div>
+
+            <div class="summary-cards">
+                
+                <div class="card">
+                    <p class="card-title">Reduction</p>
+                    <p class="card-value percentage" id="reduction">0%</p>
+                </div>
+
+                <div class="card">
+                    <p class="card-title">Compressed</p>
+                    <p class="card-value encoded" id="compressedCount">0 files</p>
+                </div>
+                
+                <div class="card">
+                    <p class="card-title">Uncompressed</p>
+                    <p class="card-value unencoded" id="uncompressedCount">0 files</p>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart">
+                    <h3 class="chart-title">Compression Distribution</h3>
+                    <div class="progress-bar">
+                        <div class="progress" id="compressionProgress" style="width: 0%"></div>
+                    </div>
+                    <p id="compressionInfo">No data available</p>
+                </div>
+                
+                <div class="chart">
+                    <h3 class="chart-title">Resolution Breakdown</h3>
+                    <div id="resolutionChart">
+                        <!-- This will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="file-info">
+                <p><strong>Uploaded File:</strong> <span id="uploadedFileName"></span></p>
+                <p><strong>Processed Date:</strong> <span id="processDate"></span></p>
+            </div>
+        </section>
+        
+        <footer>
+            <p>TDARR Stats</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropArea = document.getElementById('dropArea');
+            const fileInput = document.getElementById('fileInput');
+            const browseBtn = document.getElementById('browseBtn');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const fileInfo = document.getElementById('fileInfo');
+            const fileName = document.getElementById('fileName');
+            const fileSize = document.getElementById('fileSize');
+            const statsSection = document.getElementById('statsSection');
+            const totalSize = document.getElementById('totalSize');
+            const compressedSize = document.getElementById('compressedSize');
+            const savedSize = document.getElementById('savedSize');
+            const reduction = document.getElementById('reduction');
+            const uncompressedCount = document.getElementById('uncompressedCount');
+            const compressedCount = document.getElementById('compressedCount');
+            const compressionProgress = document.getElementById('compressionProgress');
+            const compressionInfo = document.getElementById('compressionInfo');
+            const resolutionChart = document.getElementById('resolutionChart');
+            const uploadedFileName = document.getElementById('uploadedFileName');
+            const processDate = document.getElementById('processDate');
+            
+            let selectedFile = null;
+            
+            // Open file dialog when clicking browse button
+            browseBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            // Handle file selection
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    handleFile(this.files[0]);
+                }
+            });
+            
+            // Drag and drop functionality
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                dropArea.classList.add('active');
+            }
+            
+            function unhighlight() {
+                dropArea.classList.remove('active');
+            }
+            
+            dropArea.addEventListener('drop', function(e) {
+                const dt = e.dataTransfer;
+                const file = dt.files[0];
+                handleFile(file);
+            });
+            
+            // Handle the selected file
+            function handleFile(file) {
+                if (file && file.name.endsWith('.csv')) {
+                    selectedFile = file;
+                    updateFileInfo();
+                    uploadBtn.disabled = false;
+                } else {
+                    alert('Please select a valid CSV file.');
+                    fileInput.value = '';
+                    selectedFile = null;
+                    uploadBtn.disabled = true;
+                }
+            }
+            
+            // Update file info display
+            function updateFileInfo() {
+                if (selectedFile) {
+                    fileName.textContent = selectedFile.name;
+                    fileSize.textContent = formatFileSize(selectedFile.size);
+                    fileInfo.style.display = 'flex';
+                    uploadedFileName.textContent = selectedFile.name;
+                    processDate.textContent = new Date().toLocaleString();
+                }
+            }
+            
+            // Format file size to human-readable format
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+            
+            uploadBtn.addEventListener('click', async function () {
+            if (!selectedFile) return;
+
+                uploadBtn.textContent = 'Processing...';
+                uploadBtn.disabled = true;
+
+                try {
+                    const formData = new FormData();
+                    formData.append("file", selectedFile);
+
+                    const response = await fetch('/stats', {
+                        method: "POST",
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        throw new Error("Server returned " + response.status);
+                    }
+
+                    const data = await response.json();
+
+                    updateStatistics(data);
+                    statsSection.style.display = 'block';
+                    statsSection.scrollIntoView({ behavior: 'smooth' });
+
+                } catch (err) {
+                    console.error(err);
+                    alert("Failed to process file. Check server logs.");
+                }
+
+                uploadBtn.textContent = 'Upload & Analyze';
+                uploadBtn.disabled = false;
+            });
+            
+            // Update statistics display
+            function updateStatistics(data) {
+                totalSize.textContent = formatFileSize(data.totalSize);
+                compressedSize.textContent = formatFileSize(data.compressedSize);
+                savedSize.textContent = formatFileSize(data.dataSaved);
+                reduction.textContent = data.reduction + '%';
+                uncompressedCount.textContent = data.uncompressedCount + ' files';
+                compressedCount.textContent = data.compressedCount + ' files';
+                
+                // Update compression progress bar
+                const compressionPercentage = Math.round((1 - (data.compressedSize / data.totalSize)) * 100);
+                compressionProgress.style.width = compressionPercentage + '%';
+                
+                // Update compression info text
+                compressionInfo.textContent = 
+                    'Compressed from ' + formatFileSize(data.totalSize) +' to ' + formatFileSize(data.compressedSize) +' (' + data.reduction + '% reduction)';
+                
+                // Update resolution chart
+                updateResolutionChart(data.resolutions);
+            }
+            
+            // Update resolution chart
+            function updateResolutionChart(resolutions) {
+                resolutionChart.innerHTML = ''; // Clear existing content
+                
+                const totalFiles = resolutions.reduce((sum, res) => sum + res.count, 0);
+                
+                resolutions.forEach(res => {
+                    const percentage = Math.round((res.count / totalFiles) * 100);
+                    
+                    const bar = document.createElement('div');
+                    bar.className = 'resolution-bar';
+                    
+                    const barContainer = document.createElement('div');
+                    barContainer.className = 'bar';
+                    
+                    const progressBar = document.createElement('div');
+                    progressBar.className = 'progress';
+                    progressBar.style.width = percentage + '%';
+                    
+                    const label = document.createElement('div');
+                    label.className = 'label';
+                    label.textContent = res.name;
+                    
+                    const value = document.createElement('div');
+                    value.className = 'value';
+                    value.textContent = res.count + ' (' + percentage + '%)';
+                    
+                    bar.appendChild(barContainer);
+                    barContainer.appendChild(progressBar);
+                    value.textContent = `${res.name} | ${res.count} (${percentage}%)`;
+                    bar.appendChild(value);
+
+                    
+                    resolutionChart.appendChild(bar);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
