@@ -1,4 +1,4 @@
-# TDARR Stats
+# Tdarr Stats
 
 ### A web interface that shows you quick stats when you upload your Tdarr CSV.
 
