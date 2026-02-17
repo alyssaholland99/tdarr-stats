@@ -1,0 +1,36 @@
+---
+kind: pipeline
+type: docker
+name: stable
+
+trigger:
+  event:
+    - push
+    - tag
+    - cron
+  cron:
+    - weekly-build
+
+steps:
+  - name: docker build (stable)
+    when:
+      event:
+        include: 
+        - push
+        - cron
+      cron:
+        include:
+        - weekly-build
+      branch:
+        include:
+          - main
+    image: plugins/docker
+    settings:
+      username:
+        from_secret: DOCKERHUB_USER
+      password:
+        from_secret: DOCKERHUB_PASS
+      repo:
+        from_secret: DOCKERHUB_REPOSITORY
+      tags:
+        - latest
