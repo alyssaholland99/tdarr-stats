@@ -15,22 +15,19 @@ steps:
   - name: docker build (stable)
     when:
       event:
-        include: 
-        - push
-        - cron
+        include:
+          - push
+          - cron
       cron:
         include:
-        - weekly-build
-      branch:
-        include:
-          - main
+          - weekly-build
     image: plugins/docker
     settings:
-      username:
+      username: 
         from_secret: DOCKERHUB_USER
-      password:
+      password: 
         from_secret: DOCKERHUB_PASS
-      repo:
+      repo: 
         from_secret: DOCKERHUB_REPOSITORY
       tags:
         - latest
