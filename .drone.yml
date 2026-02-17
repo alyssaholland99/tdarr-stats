@@ -15,19 +15,48 @@ steps:
   - name: docker build (stable)
     when:
       event:
-        include:
-          - push
-          - cron
+        include: 
+        - push
+        - cron
       cron:
         include:
-          - weekly-build
+        - weekly-build
+      branch:
+        include:
+          - main
     image: plugins/docker
     settings:
-      username: 
+      username:
         from_secret: DOCKERHUB_USER
-      password: 
+      password:
         from_secret: DOCKERHUB_PASS
-      repo: 
+      repo:
         from_secret: DOCKERHUB_REPOSITORY
       tags:
         - latest
+
+---
+kind: pipeline
+type: docker
+name: testing
+
+trigger:
+  event:
+    - push
+
+steps:
+  - name: docker build (testing)
+    when:
+      event:
+        include: 
+        - push
+    image: plugins/docker
+    settings:
+      username:
+        from_secret: DOCKERHUB_USER
+      password:
+        from_secret: DOCKERHUB_PASS
+      repo:
+        from_secret: DOCKERHUB_REPOSITORY
+      tags:
+        - testing
